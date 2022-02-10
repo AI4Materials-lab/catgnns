@@ -1,0 +1,24 @@
+includes:
+- ocp_lightning/notebooks/configs/base.yml
+
+model:
+    name: edgeupdatenet
+    hidden_channels: 128
+    num_interactions: 3
+    num_gaussians: 128
+    cutoff: 6.0
+    regress_forces: False
+    use_pbc: True
+  
+optim:
+    batch_size: 32
+    ema_decay: 0.999
+    epochs: 50
+    eval_batch_size: 32
+    eval_every: 7192
+    lr_initial: 0.00025
+    max_epochs: 50
+    max_lr: 0.00025
+    num_workers: 10
+    scheduler: OneCycleLR
+    steps_per_epoch: 14385

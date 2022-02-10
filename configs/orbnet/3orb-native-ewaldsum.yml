@@ -1,0 +1,40 @@
+includes:
+- ocp_lightning/notebooks/configs/base.yml
+
+dataset:
+  - src: is2res_train_val_test_lmdbs/data/is2re/all/descriptors/train/data.mdb
+    normalize_labels: True
+    target_mean: -1.525913953781128
+    target_std: 2.279365062713623
+  - src: is2res_train_val_test_lmdbs/data/is2re/all/descriptors/val_id/data.mdb
+
+model:
+  name: orbnet_native_desc
+  emb_size_atom: 128
+  emb_size_edge: 64
+  cutoff: 6.
+  rbf:
+    name: spherical_bessel
+  envelope:
+    name: exponential
+  descriptor_name: ewaldsum
+  cutoff_desc: 8000.
+  num_radial_desc: 64
+  period_and_group_path: 'src/data/features.csv'
+  regress_forces: False
+  use_pbc: True
+  otf_graph: False
+
+optim:
+  batch_size: 32
+  epochs: 25
+  eval_batch_size: 32
+  eval_every: 7192
+  lr_initial: 0.001
+  max_epochs: 25
+  max_lr: 0.001
+  num_workers: 10
+  scheduler: OneCycleLR
+  steps_per_epoch: 14385
+  ema_decay: 0.999
+  

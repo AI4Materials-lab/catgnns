@@ -1,0 +1,35 @@
+includes:
+- ocp_lightning/notebooks/configs/base.yml
+
+dataset:
+  - src: is2res_train_val_test_lmdbs/data/is2re/all/descriptors/train/data.mdb
+    normalize_labels: True
+    target_mean: -1.525913953781128
+    target_std: 2.279365062713623
+  - src: is2res_train_val_test_lmdbs/data/is2re/all/descriptors/val_id/data.mdb
+
+model:
+    name: edgeupdatenet_desc
+    cutoff: 6.
+    hidden_channels: 128
+    num_gaussians: 128
+    num_radial_desc: 128
+    num_interactions: 3
+    cutoff_desc: 8061.96
+    descriptor_name: ewaldsum
+    otf_graph: false
+    regress_forces: false
+    use_pbc: true
+
+optim:
+    batch_size: 32
+    ema_decay: 0.999
+    epochs: 50
+    eval_batch_size: 32
+    eval_every: 7192
+    lr_initial: 0.00025
+    max_epochs: 50
+    max_lr: 0.00025
+    num_workers: 10
+    scheduler: OneCycleLR
+    steps_per_epoch: 14385
