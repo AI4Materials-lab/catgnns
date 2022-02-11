@@ -9,7 +9,7 @@ dataset:
   - src: is2res_train_val_test_lmdbs/data/is2re/all/descriptors/val_id/data.mdb
 
 model:
-  name: orbnet_native_surf
+  name: ofmnet_native_surf
   emb_size_atom: 128
   emb_size_edge: 64
   cutoff: 6.

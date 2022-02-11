@@ -231,7 +231,7 @@ class EmbeddingBlock(nn.Module):
         return h_enc, e_enc, e_aux
 
 
-class OrbNet(nn.Module):
+class OfmNet(nn.Module):
     def __init__(
         self,
         num_radial: int = 8,
@@ -313,8 +313,8 @@ class OrbNet(nn.Module):
             output_block.reset_parameters()
 
 
-@registry.register_model("orbnet_native_surf_ofms")
-class OrbNetWrap(OrbNet):
+@registry.register_model("ofmnet_native_surf_ofms")
+class OfmNetWrap(OfmNet):
     def __init__(
         self,
         num_atoms,  # not used
@@ -351,7 +351,7 @@ class OrbNetWrap(OrbNet):
         self.adsorb_atomic_numbers = (1, 6, 7, 8)
         self.cov_coeff = cov_coeff
 
-        super(OrbNetWrap, self).__init__(
+        super(OfmNetWrap, self).__init__(
             num_heads=num_heads,
             num_radial=num_radial,
             emb_size_atom=emb_size_atom,

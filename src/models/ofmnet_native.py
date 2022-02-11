@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 import torch
 from ocpmodels.common.registry import registry
-from ocpmodels.common.utils import conditional_grad, get_pbc_distances, radius_graph_pbc
+from ocpmodels.common.utils import (conditional_grad, get_pbc_distances,
+                                    radius_graph_pbc)
 from ocpmodels.models.gemnet.layers.radial_basis import RadialBasis
 from ocpmodels.models.orbnet import DenseLayer, OutputBlock, ResidualLayer
-from src.utils import get_surf_bin_features
 from torch import Tensor, nn
 from torch.utils import data
 from torch_geometric.nn import radius_graph
@@ -118,13 +118,17 @@ class MultiHeadAttention(nn.Module):
         edge_attr: Tensor,
         edge_aux: Tensor,
     ):
-        x_j = x[edge_index[0]]  # Source node features [num_edges, num_features]
-        x_i = x[edge_index[1]]  # Target node features [num_edges, num_features]
+        x_j = x[
+            edge_index[0]
+        ]  # Source node features [num_edges, num_features]
+        x_i = x[
+            edge_index[1]
+        ]  # Target node features [num_edges, num_features]
 
         m = self.m_dense(x_i * x_j * edge_attr)
 
         alpha = self.attention_act(
-            (
+            (   
                 self.attentions_lins[0](x_i)
                 * self.attentions_lins[0](x_j)
                 * edge_attr
@@ -134,18 +138,25 @@ class MultiHeadAttention(nn.Module):
         # alpha = softmax(alpha, edge_index[1], num_nodes=x.size(0))
         m_att = alpha * m
 
-        m_att = scatter(m_att, edge_index[1], dim=0, dim_size=x.size(0), reduce="add")
+        m_att = scatter(
+            m_att, edge_index[1], dim=0, dim_size=x.size(0), reduce="add"
+        )
 
         for attention_lin in self.attentions_lins[1:]:
             alpha = self.attention_act(
-                (attention_lin(x_i) * attention_lin(x_j) * edge_attr * edge_aux).mean(
-                    dim=-1, keepdim=True
-                )
+                (
+                    attention_lin(x_i)
+                    * attention_lin(x_j)
+                    * edge_attr
+                    * edge_aux
+                ).mean(dim=-1, keepdim=True)
             )
             # alpha = softmax(alpha, edge_index[1], num_nodes=x.size(0))
             att = alpha * m
 
-            att = scatter(att, edge_index[1], dim=0, dim_size=x.size(0), reduce="add")
+            att = scatter(
+                att, edge_index[1], dim=0, dim_size=x.size(0), reduce="add"
+            )
             m_att = torch.cat(
                 [
                     m_att,
@@ -159,7 +170,6 @@ class MultiHeadAttention(nn.Module):
         e = self.dense_e(m)
 
         return out, e
-
 
 class EmbeddingBlock(nn.Module):
     def __init__(
@@ -191,7 +201,7 @@ class EmbeddingBlock(nn.Module):
             ResidualLayer(emb_size_edge, num_layers=num_residual, act=act),
         )
         self.enc_h = nn.Sequential(
-            DenseLayer(emb_size_atom + 4, emb_size_atom),
+            DenseLayer(emb_size_atom, emb_size_atom),
             ResidualLayer(emb_size_atom, num_layers=num_residual, act=act),
         )
 
@@ -210,12 +220,11 @@ class EmbeddingBlock(nn.Module):
         self,
         period: Tensor,
         group: Tensor,
-        node_bin_features: Tensor,
         edge_attr: Tensor,
     ) -> Tuple[Tensor, Tensor, Tensor]:
         period_emb = self.embedding_period(period)
         group_emb = self.embedding_group(group)
-        h = torch.cat([period_emb, group_emb, node_bin_features], dim=-1)
+        h = torch.cat([period_emb, group_emb], dim=-1)
 
         e_rbf = self.rbf(edge_attr)
 
@@ -226,8 +235,7 @@ class EmbeddingBlock(nn.Module):
 
         return h_enc, e_enc, e_aux
 
-
-class OrbNet(nn.Module):
+class OfmNet(nn.Module):
     def __init__(
         self,
         num_radial: int = 8,
@@ -265,7 +273,10 @@ class OrbNet(nn.Module):
         )
 
         self.output_blocks = nn.ModuleList(
-            [OutputBlock(emb_size_atom, act) for _ in range(num_interactions + 1)]
+            [
+                OutputBlock(emb_size_atom, act)
+                for _ in range(num_interactions + 1)
+            ]
         )
 
         self.reset_parameters()
@@ -274,17 +285,13 @@ class OrbNet(nn.Module):
         self,
         period: Tensor,
         group: Tensor,
-        node_bin_features: Tensor,
         edge_attr: Tensor,
         edge_index: Tensor,
         batch: Tensor = None,
     ):
         # Embedding block.
         h, e, e_aux = self.emb(
-            period=period,
-            group=group,
-            node_bin_features=node_bin_features,
-            edge_attr=edge_attr,
+            period=period, group=group, edge_attr=edge_attr
         )
         P = self.output_blocks[0](h)
 
@@ -306,16 +313,14 @@ class OrbNet(nn.Module):
         for output_block in self.output_blocks:
             output_block.reset_parameters()
 
-
-@registry.register_model("orbnet_native_surf")
-class OrbNetWrap(OrbNet):
+@registry.register_model("ofmnet_native")
+class OfmNetWrap(OfmNet):
     def __init__(
         self,
         num_atoms,  # not used
         bond_feat_dim,  # not used
         num_targets,
-        features_csv: str,
-        cov_coeff: float = 1.5,
+        period_and_group_path: str,
         use_pbc=True,
         regress_forces=False,
         otf_graph=False,
@@ -337,15 +342,12 @@ class OrbNetWrap(OrbNet):
         self.cutoff = cutoff
         self.otf_graph = otf_graph
 
-        features = pd.read_csv(features_csv)
+        period_and_group = pd.read_csv(period_and_group_path)
 
-        self.periods = features["Period"].values
-        self.groups = features["Group"].values
-        self.cov_rad = features["Cov_radius_cordero"].values
-        self.adsorb_atomic_numbers = (1, 6, 7, 8)
-        self.cov_coeff = cov_coeff
+        self.periods = period_and_group["Period"].values
+        self.groups = period_and_group["Group"].values
 
-        super(OrbNetWrap, self).__init__(
+        super(OfmNetWrap, self).__init__(
             num_heads=num_heads,
             num_radial=num_radial,
             emb_size_atom=emb_size_atom,
@@ -375,7 +377,10 @@ class OrbNetWrap(OrbNet):
             data.neighbors = neighbors
 
         if self.use_pbc:
-            assert atomic_numbers.dim() == 1 and atomic_numbers.dtype == torch.long
+            assert (
+                atomic_numbers.dim() == 1
+                and atomic_numbers.dtype == torch.long
+            )
 
             out = get_pbc_distances(
                 pos,
@@ -385,13 +390,13 @@ class OrbNetWrap(OrbNet):
                 data.neighbors,
             )
 
-            data.edge_index = out["edge_index"]
-            data.distances = out["distances"]
+            edge_index = out["edge_index"]
+            edge_distance = out["distances"]
 
         else:
-            data.edge_index = radius_graph(pos, r=self.cutoff, batch=data.batch)
-            j, i = data.edge_index
-            data.distances = (pos[j] - pos[i]).norm(dim=-1)
+            edge_index = radius_graph(pos, r=self.cutoff, batch=data.batch)
+            j, i = edge_index
+            edge_distance = (pos[j] - pos[i]).norm(dim=-1)
 
         period = torch.tensor(self.periods[atomic_numbers.cpu() - 1]).type_as(
             atomic_numbers
@@ -399,16 +404,8 @@ class OrbNetWrap(OrbNet):
         group = torch.tensor(self.groups[atomic_numbers.cpu() - 1]).type_as(
             atomic_numbers
         )
-        node_bin_features = get_surf_bin_features(
-            data, self.cov_rad, self.adsorb_atomic_numbers, self.cov_coeff
-        )
         energy = super().forward(
-            period,
-            group,
-            node_bin_features,
-            data.distances,
-            data.edge_index,
-            data.batch,
+            period, group, edge_distance, edge_index, data.batch
         )
 
         return energy

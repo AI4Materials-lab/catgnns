@@ -6,10 +6,10 @@ dataset:
     normalize_labels: True
     target_mean: -1.525913953781128
     target_std: 2.279365062713623
-  - src: is2res_train_val_test_lmdbs/data/is2re/all/descriptors/val_idh/data.mdb
+  - src: is2res_train_val_test_lmdbs/data/is2re/all/descriptors/val_id/data.mdb
 
 model:
-  name: orbnet_native_desc
+  name: ofmnet_native_ofms
   emb_size_atom: 128
   emb_size_edge: 64
   cutoff: 6.
@@ -17,10 +17,7 @@ model:
     name: spherical_bessel
   envelope:
     name: exponential
-  descriptor_name: sine
-  cutoff_desc: 1000.
-  num_radial_desc: 64
-  period_and_group_path: 'src/data/features.csv'
+  features_csv: 'src/data/features.csv'
   regress_forces: False
   use_pbc: True
   otf_graph: False

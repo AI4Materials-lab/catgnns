@@ -230,7 +230,7 @@ class EmbeddingBlock(nn.Module):
         return h_enc, e_enc, e_aux
 
 
-class OrbNet(nn.Module):
+class OfmNet(nn.Module):
     def __init__(
         self,
         num_radial: int = 8,
@@ -311,7 +311,7 @@ class OrbNet(nn.Module):
 
 
 @registry.register_model("orbnet_native_ofms")
-class OrbNetWrap(OrbNet):
+class OfmNetWrap(OfmNet):
     def __init__(
         self,
         num_atoms,  # not used
@@ -344,7 +344,7 @@ class OrbNetWrap(OrbNet):
         self.periods = features["Period"].values
         self.groups = features["Group"].values
 
-        super(OrbNetWrap, self).__init__(
+        super(OfmNetWrap, self).__init__(
             num_heads=num_heads,
             num_radial=num_radial,
             emb_size_atom=emb_size_atom,
